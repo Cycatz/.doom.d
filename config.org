@@ -451,7 +451,15 @@ See also `org-save-all-org-buffers'"
 
 #+end_src
 **** evil-org-agenda
-???
+Fix the issue evil keybindings doesn't work in super-agenda headers.
+
+See [[https://github.com/alphapapa/org-super-agenda/issues/50][Some keybindings not working at heading · Issue #50 · alphapapa/org-super-agenda]].
+
+#+begin_src emacs-lisp
+;; Clear org-super-agenda map
+(after! org-super-agenda
+  (setq org-super-agenda-header-map (make-sparse-keymap)))
+#+end_src
 **** org-super-agenda
 
 #+begin_src emacs-lisp
