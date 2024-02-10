@@ -152,6 +152,19 @@
             '(menu-bar-lines . 0)
             '(vertical-scroll-bars . nil))))
 
+(setq-default frame-title-format
+              '(:eval
+                (format "%s: %s %s - Doom Emacs"
+                        (file-name-nondirectory server-name)
+                        (buffer-name)
+                        (cond
+                         (buffer-file-truename
+                          (concat "(" buffer-file-truename ")"))
+                         (dired-directory
+                          (concat "{" dired-directory "}"))
+                         (t
+                          "[no file]")))))
+
 (setq x-stretch-cursor t)   ; Stretch cursor to the glyph width
 
 ;; Leader prefixes
