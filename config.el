@@ -114,17 +114,30 @@
       )
 
 ;; Setting medium weight for "Inconsolata Semibold" doesn't work, it doesn't exist in the list of `describe-font`.
-(setq doom-font "-CYRE-Inconsolata-semibold-normal-semicondensed-*-24-*-*-*-m-0-iso10646-1")
+;; (setq doom-font "-CYRE-Inconsolata-semibold-normal-semicondensed-*-24-*-*-*-m-0-iso10646-1")
+;; (setq doom-font "-CYRE-Inconsolata-semibold-normal-semicondensed-*-24-*-*-*-m-0-iso10646-1")
+;; (setq doom-font "-CYRE-Inconsolata-semibold-normal-semicondensed-*-22-*-*-*-m-0-iso10646-1")
+(setq doom-font "-????-Sarasa Term TC-normal-normal-normal-*-20-*-*-*-d-0-iso10646-1")
+
+;; (setq doom-font "-UKWN-JuliaMono-normal-normal-normal-*-20-*-*-*-m-80-iso10646-1")
+
+;; The spacing doesn't work
+;; (setq doom-font (font-spec :family "Julia Mono" :size 20 :spacing 90))
+(setq doom-variable-pitch-font "-LINO-Helvetica Neue-normal-normal-normal-*-22-*-*-*-*-0-iso10646-1")
+
+(setq doom-modeline-height 1)
+(set-face-attribute 'mode-line nil :height 150)
+(set-face-attribute 'mode-line-inactive nil :height 150)
 
 ;; The CJK characters will not be scaled when scaling in this approach.
-(defun cycatz/set-fonts()
-  (set-fontset-font t 'unicode (font-spec :family "蘋方-繁" :size 19) nil 'append))
-  (set-fontset-font t 'cjk-misc (font-spec :family "Noto Sans CJKS TC" :size 19) nil 'append)
-(add-hook! 'after-setting-font-hook :append 'cycatz/set-fonts)
+;; UPD at 06/06: we just use Sarasa Term, it solves the problem that CJK font do not scale with Ctrl-+ and ctrl--
+;; (defun cycatz/set-fonts()
+;;   (set-fontset-font t 'unicode (font-spec :family "蘋方-繁" :size 20) nil 'append)
+;;   (set-fontset-font t 'cjk-misc (font-spec :family "Noto Sans CJKS TC" :size 20) nil 'append))
+;; (add-hook! 'after-setting-font-hook :append 'cycatz/set-fonts)
 
 ;; Actually we can append our CJK font into the emoji list, it solves the issue of missing fonts and is able to be scaled.
 ;; But the default size is too large for me.
-;; (add-to-list 'doom-emoji-fallback-font-families "蘋方-繁")
 
 (after! yasnippet
     (add-to-list 'yas-snippet-dirs (concat (getenv "HOME") "/Code/Snippets")))
@@ -153,6 +166,9 @@
 
 (map! :map vertico-map
       "C-o" #'embark-act)
+
+(map! :leader
+      :desc "Transpose window layout" "wz" #'rotate-layout)
 
 (after! org;
   ; truncate lines
@@ -186,11 +202,17 @@
         org-default-priority ?C
         org-lowest-priority ?E)
 
+
+  ;; Force using id when storing links
+  (setq org-id-link-to-org-use-id 'create-if-interactive-and-no-custom-id)
+  ;; Time stamped UUID
+  (setq org-id-method 'ts)
+  (setq org-attach-id-to-path-function-list '(org-attach-id-ts-folder-format org-attach-id-uuid-folder-format))
   ;; Override the default config
   (setq org-structure-template-alist
-      '(("s" . "src")
-       ("l" . "export latex\n")
-       ("q" . "quote\n")))
+        '(("s" . "src")
+          ("l" . "export latex\n")
+          ("q" . "quote\n")))
   
   (add-to-list 'org-modules 'org-tempo t)
   (require 'org-tempo)
@@ -203,13 +225,13 @@
   (add-to-list 'org-structure-template-alist '("yaml" . "src yaml"))
   (add-to-list 'org-structure-template-alist '("json" . "src json"))
   
-  ; templates for elisp source block
+                                          ; templates for elisp source block
   (add-to-list 'org-structure-template-alist '("el" . "src emacs-lisp"))
-  ; templates for noweb reference syntax
+                                          ; templates for noweb reference syntax
   (add-to-list 'org-structure-template-alist '("ei" . "src emacs-lisp :noweb no-export"))
   (add-to-list 'org-structure-template-alist '("es" . "src emacs-lisp :tangle no :noweb-ref"))
   
-  ; templates for C/C++ source block
+                                          ; templates for C/C++ source block
   (add-to-list 'org-structure-template-alist '("c"  . "src C"))
   (add-to-list 'org-structure-template-alist '("cp" . "src cpp :includes <bits/stdc++.h> :namespaces std"))
 
@@ -225,27 +247,27 @@
   ; @: tells org-mode to record a note and a date/time stamp
   ; For example:
   ; b!  : recording a date/time stamp when entering BUG state
-  ; w@/!: recording a note and a date/time stamp when entering WAITING state,
-  ;       and recording a date/time stamp when leaving WAITING state, too
+  ; w@/!: recording a note and a date/time stamp when entering WAIT state,
+  ;       and recording a date/time stamp when leaving WAIT state, too
   (setq org-todo-keywords
-    '((sequence "TODO(t)" "IN-PROGRESS(p!)" "NEXT(n@/!)" "|" "DONE(d@/!)")
-        (sequence "WAITING(w@/!)" "|" "CANCELLED(c@!/!)")
+    '((sequence "TODO(t)" "DOIN(p!)" "NEXT(n@/!)" "|" "DONE(d@/!)")
+        (sequence "WAIT(w@/!)" "|" "CANC(c@!/!)")
         (sequence "ONGOING(o)" "|")
-        (sequence "SOMEDAY(s/!)" "|")
-        (sequence "|" "SUSPENDED(e@!/!)")
+        (sequence "WANT(s/!)" "|")
+        (sequence "|" "SUSP(e@!/!)")
         (sequence "BUG(b!)" "KNOWNCAUSE(k)" "|" "FIXED(f!/!)")
         (sequence "DINE(n)" "CHAT(a)" "EMAIL(e)" "MEETING(m)" "|")))
   
   ;; (setq org-todo-keyword-faces
   ;;   '(("TODO"        . (:foreground "red" :weight bold))
-  ;;     ("IN-PROGRESS" . (:foreground "orange" :weight bold))
+  ;;     ("DOIN" . (:foreground "orange" :weight bold))
   ;;     ("NEXT"        . (:foreground "IndianRed3" :weight bold))
   ;;     ("DONE"        . (:foreground "forest green" :weight bold))
   ;;     ("DONE"        . (:foreground "forest green" :weight bold))
-  ;;     ("WAITING"     . (:foreground "orange" :weight bold))
-  ;;     ("CANCELLED"   . (:foreground "forest green" :weight bold))
-  ;;     ("SOMEDAY"     . (:foreground "orange" :weight bold))
-  ;;     ("SUSPENDED"     . (:foreground "orange" :weight bold))
+  ;;     ("WAIT"     . (:foreground "orange" :weight bold))
+  ;;     ("CANC"   . (:foreground "forest green" :weight bold))
+  ;;     ("WANT"     . (:foreground "orange" :weight bold))
+  ;;     ("SUSP"     . (:foreground "orange" :weight bold))
   ;;     ("BUG"         . (:foreground "red" :weight bold))
   ;;     ("KNOWNCAUSE"  . (:foreground "red" :weight bold))
   ;;     ("FIXED"       . (:foreground "forest green" :weight bold))
@@ -263,19 +285,22 @@
   
   (setq org-todo-keyword-faces
     '(("TODO"        . (:foreground "#fb4934"    :weight bold))       ;; red
-      ("IN-PROGRESS" . (:foreground "#f38019"    :weight bold))       ;; orange
       ("DOIN"        . (:foreground "#f38019"    :weight bold))       ;; orange
       ("NEXT"        . (:foreground "IndianRed3" :weight bold))       ;; Indian red
       ("DONE"        . (:foreground "#b8bb26"    :weight bold))       ;; green
-      ("WAITING"     . (:foreground "#fabd2f"    :weight bold))       ;; yellow
       ("WAIT"        . (:foreground "#fabd2f"    :weight bold))       ;; yellow
-      ("SOMEDAY"     . (:foreground "#fabd2f"    :weight bold))       ;; yellow
-      ("CANCELLED"   . (:foreground "#928374"    :weight bold))       ;; gray
-      ("SUSPENDED"   . (:foreground "#928374"    :weight bold))       ;; gray
+      ;; WANT to do someday
+      ;; Alternatives: TBD., SOON
+      ("WANT"        . (:foreground "#fabd2f"    :weight bold))       ;; yellow
+      ;; cancelled
+      ("CANC"        . (:foreground "#928374"    :weight bold))       ;; gray
+      ;; suspended
+      ("SUSP"        . (:foreground "#928374"    :weight bold))       ;; gray
       ("BUG"         . (:foreground "#fb4934"    :weight bold))       ;; red
       ("KNOWNCAUSE"  . (:foreground "#fb4934"    :weight bold))       ;; red
       ("FIXED"       . (:foreground "#b8bb26"    :weight bold))       ;; green
       ("ONGOING"     . (:foreground "#fabd2f"    :weight bold))))     ;; yellow
+  (add-hook 'org-insert-todo-heading-hook (lambda () (org-set-property "CREATED" (format-time-string (org-time-stamp-format t t)))))
   (setq org-clock-clocktable-default-properties '(:scope subtree :maxlevel 4 :timestamp t :link t :tags t :narrow 36!))
   
   (defun cycatz/org-clock-report-with-tag ()
@@ -291,7 +316,7 @@
   ;; Clock out when moving task to a done state
   (setq org-clock-out-when-done t)
   ;; Change tasks to whatever when clocking in
-  (setq org-clock-in-switch-to-state "IN-PROGRESS")
+  (setq org-clock-in-switch-to-state "DOIN")
   ;; use pretty things for the clocktable (this solves the misalignment issue when the title contains CJK characters)
   (setq org-pretty-entities t)
   
@@ -299,11 +324,10 @@
   (setq org-clock-persist 'history)
   (org-clock-persistence-insinuate)
   
+  ;; 2023/01/29: This will result in the capture task being created at 04:00
   ;; I usually sleep before 04:00
-  (setq org-extend-today-until 4)
+  ;; (setq org-extend-today-until 4)
 
-  (general-define-key "C-c c" 'counsel-org-capture)
-  
   ;; store new notes at the beginning of a file or entry.
   (setq org-reverse-note-order t)
   
@@ -344,13 +368,13 @@
   	         "** EMAIL %^{Title} %^g :mail:\n:PROPERTIES:\n:Created: %U\n:END:\n- ref :: %a\n%?"
              :prepend t :tree-type week)
             ("tf" "chore" entry (file+olp+datetree "tracker.org")
-  	         "** IN-PROGRESS %^{Title} %^g :chore:\n:PROPERTIES:\n:Created: %U\n:END:\n- ref :: %a\n%?"
+  	         "** DOIN %^{Title} %^g :chore:\n:PROPERTIES:\n:Created: %U\n:END:\n- ref :: %a\n%?"
              :prepend t :tree-type week)
             ("ts" "sport" entry (file+olp+datetree "tracker.org")
-  	         "** IN-PROGRESS %^{Title} %^g :sport:\n:PROPERTIES:\n:Created: %U\n:END:\n- ref :: %a\n%?"
+  	         "** DOIN %^{Title} %^g :sport:\n:PROPERTIES:\n:Created: %U\n:END:\n- ref :: %a\n%?"
              :prepend t :tree-type week)
             ("ti" "interruption" entry (file+olp+datetree "tracker.org")
-  	         "** IN-PROGRESS %^{Title} %^g :interruption:\n:PROPERTIES:\n:Created: %U\n:END:\n- ref :: %a\n%?"
+  	         "** DOIN %^{Title} %^g :interruption:\n:PROPERTIES:\n:Created: %U\n:END:\n- ref :: %a\n%?"
              :prepend t :tree-type week :clock-in t :clock-keep t)
   
             ;; for org-protcol firefox addon
@@ -401,6 +425,34 @@
   
   (general-define-key "C-c w" 'org-refile-to-datetree)
   
+  
+  ;; Leaving a link in origin place when refiling
+  ;; See https://gist.github.com/samspills/895c29a1c0f6bf2e66c23149bfcc0f38
+  ;; Not perfect now, the link of the refiled headline will insert at the end of the headline
+  ;; And sometimes the link still uses filename rather than id, don't know why
+  (defun cycatz/org-refile--insert-link ( &rest _ )
+    (unless (string-suffix-p "inbox.org" buffer-file-name)
+      (org-back-to-heading)
+      (let* ((refile-region-marker (point-marker))
+             (source-link (org-store-link nil)))
+        (org-insert-heading)
+        (insert source-link)
+        (org-super-links-store-link nil)
+        (goto-char refile-region-marker)
+        (move-end-of-line nil)
+        (org-super-links-insert-link)
+        (goto-char refile-region-marker))))
+  ;; Under testing, don't apply to org-refile directly
+  ;; (advice-add 'org-refile
+  ;;             :before
+  ;;             #'org-refile--insert-link)
+  
+  (defun cycatz/org-refile-insert-link (&rest args)
+    "Insert a link to the current location when refiling, then call org-refile."
+    (interactive)
+    (cycatz/org-refile--insert-link)
+    ;; Call org-refile with the same arguments
+    (apply 'org-refile args))
   
   
   ; Global agenda files
@@ -456,7 +508,8 @@
   (setq org-deadline-warning-days 28)
   
   ; open agenda in current window and delete other windows
-  (setq-default org-agenda-window-setup 'only-window)
+  ; (setq-default org-agenda-window-setup 'only-window)
+  (setq-default org-agenda-window-setup 'reorganize-frame)
   
   (setq org-agenda-prefix-format '((agenda . " %i %-12:c %-6:e %?-12t% s")
                                    (todo . " %i %-12:c %-6:e ")
@@ -493,7 +546,27 @@
           (lambda (&rest _)
             (gtd-save-org-buffers)))
   
+  
+  (advice-add 'org-agenda-clock-in :after 'gtd-save-org-buffers)
+  (advice-add 'org-agenda-clock-out :after 'gtd-save-org-buffers)
   )
+
+;; Force using id when storing links
+(setq org-id-link-to-org-use-id 'create-if-interactive-and-no-custom-id)
+;; Time stamped UUID
+(setq org-id-method 'ts)
+(setq org-attach-id-to-path-function-list '(org-attach-id-ts-folder-format org-attach-id-uuid-folder-format))
+
+(map!
+      :after org
+      :map org-mode-map
+      :prefix "C-c s"
+      "s"    #'org-super-links-link
+      "l"    #'org-super-links-store-link
+      "C-l"  #'org-super-links-insert-link
+      "d"    #'org-super-links-quick-insert-drawer-link
+      "i"    #'org-super-links-quick-insert-inline-link
+      "C-d"  #'org-super-links-delete-link)
 
 ;; Refer from: https://orgmode.org/list/8763vfa9hl.fsf@legolas.norang.ca/
 
@@ -504,27 +577,27 @@
 ; @: tells org-mode to record a note and a date/time stamp
 ; For example:
 ; b!  : recording a date/time stamp when entering BUG state
-; w@/!: recording a note and a date/time stamp when entering WAITING state,
-;       and recording a date/time stamp when leaving WAITING state, too
+; w@/!: recording a note and a date/time stamp when entering WAIT state,
+;       and recording a date/time stamp when leaving WAIT state, too
 (setq org-todo-keywords
-  '((sequence "TODO(t)" "IN-PROGRESS(p!)" "NEXT(n@/!)" "|" "DONE(d@/!)")
-      (sequence "WAITING(w@/!)" "|" "CANCELLED(c@!/!)")
+  '((sequence "TODO(t)" "DOIN(p!)" "NEXT(n@/!)" "|" "DONE(d@/!)")
+      (sequence "WAIT(w@/!)" "|" "CANC(c@!/!)")
       (sequence "ONGOING(o)" "|")
-      (sequence "SOMEDAY(s/!)" "|")
-      (sequence "|" "SUSPENDED(e@!/!)")
+      (sequence "WANT(s/!)" "|")
+      (sequence "|" "SUSP(e@!/!)")
       (sequence "BUG(b!)" "KNOWNCAUSE(k)" "|" "FIXED(f!/!)")
       (sequence "DINE(n)" "CHAT(a)" "EMAIL(e)" "MEETING(m)" "|")))
 
 ;; (setq org-todo-keyword-faces
 ;;   '(("TODO"        . (:foreground "red" :weight bold))
-;;     ("IN-PROGRESS" . (:foreground "orange" :weight bold))
+;;     ("DOIN" . (:foreground "orange" :weight bold))
 ;;     ("NEXT"        . (:foreground "IndianRed3" :weight bold))
 ;;     ("DONE"        . (:foreground "forest green" :weight bold))
 ;;     ("DONE"        . (:foreground "forest green" :weight bold))
-;;     ("WAITING"     . (:foreground "orange" :weight bold))
-;;     ("CANCELLED"   . (:foreground "forest green" :weight bold))
-;;     ("SOMEDAY"     . (:foreground "orange" :weight bold))
-;;     ("SUSPENDED"     . (:foreground "orange" :weight bold))
+;;     ("WAIT"     . (:foreground "orange" :weight bold))
+;;     ("CANC"   . (:foreground "forest green" :weight bold))
+;;     ("WANT"     . (:foreground "orange" :weight bold))
+;;     ("SUSP"     . (:foreground "orange" :weight bold))
 ;;     ("BUG"         . (:foreground "red" :weight bold))
 ;;     ("KNOWNCAUSE"  . (:foreground "red" :weight bold))
 ;;     ("FIXED"       . (:foreground "forest green" :weight bold))
@@ -542,19 +615,23 @@
 
 (setq org-todo-keyword-faces
   '(("TODO"        . (:foreground "#fb4934"    :weight bold))       ;; red
-    ("IN-PROGRESS" . (:foreground "#f38019"    :weight bold))       ;; orange
     ("DOIN"        . (:foreground "#f38019"    :weight bold))       ;; orange
     ("NEXT"        . (:foreground "IndianRed3" :weight bold))       ;; Indian red
     ("DONE"        . (:foreground "#b8bb26"    :weight bold))       ;; green
-    ("WAITING"     . (:foreground "#fabd2f"    :weight bold))       ;; yellow
     ("WAIT"        . (:foreground "#fabd2f"    :weight bold))       ;; yellow
-    ("SOMEDAY"     . (:foreground "#fabd2f"    :weight bold))       ;; yellow
-    ("CANCELLED"   . (:foreground "#928374"    :weight bold))       ;; gray
-    ("SUSPENDED"   . (:foreground "#928374"    :weight bold))       ;; gray
+    ;; WANT to do someday
+    ;; Alternatives: TBD., SOON
+    ("WANT"        . (:foreground "#fabd2f"    :weight bold))       ;; yellow
+    ;; cancelled
+    ("CANC"        . (:foreground "#928374"    :weight bold))       ;; gray
+    ;; suspended
+    ("SUSP"        . (:foreground "#928374"    :weight bold))       ;; gray
     ("BUG"         . (:foreground "#fb4934"    :weight bold))       ;; red
     ("KNOWNCAUSE"  . (:foreground "#fb4934"    :weight bold))       ;; red
     ("FIXED"       . (:foreground "#b8bb26"    :weight bold))       ;; green
     ("ONGOING"     . (:foreground "#fabd2f"    :weight bold))))     ;; yellow
+
+(add-hook 'org-insert-todo-heading-hook (lambda () (org-set-property "CREATED" (format-time-string (org-time-stamp-format t t)))))
 
 ;; (setq org-agenda-files '((concat org-directory "")
 ;;                         (concat org-directory "/school")))
@@ -598,6 +675,34 @@ is nil, refile in the current file."
 
 (general-define-key "C-c w" 'org-refile-to-datetree)
 
+
+;; Leaving a link in origin place when refiling
+;; See https://gist.github.com/samspills/895c29a1c0f6bf2e66c23149bfcc0f38
+;; Not perfect now, the link of the refiled headline will insert at the end of the headline
+;; And sometimes the link still uses filename rather than id, don't know why
+(defun cycatz/org-refile--insert-link ( &rest _ )
+  (unless (string-suffix-p "inbox.org" buffer-file-name)
+    (org-back-to-heading)
+    (let* ((refile-region-marker (point-marker))
+           (source-link (org-store-link nil)))
+      (org-insert-heading)
+      (insert source-link)
+      (org-super-links-store-link nil)
+      (goto-char refile-region-marker)
+      (move-end-of-line nil)
+      (org-super-links-insert-link)
+      (goto-char refile-region-marker))))
+;; Under testing, don't apply to org-refile directly
+;; (advice-add 'org-refile
+;;             :before
+;;             #'org-refile--insert-link)
+
+(defun cycatz/org-refile-insert-link (&rest args)
+  "Insert a link to the current location when refiling, then call org-refile."
+  (interactive)
+  (cycatz/org-refile--insert-link)
+  ;; Call org-refile with the same arguments
+  (apply 'org-refile args))
 
 
 ; Global agenda files
@@ -653,7 +758,8 @@ is nil, refile in the current file."
 (setq org-deadline-warning-days 28)
 
 ; open agenda in current window and delete other windows
-(setq-default org-agenda-window-setup 'only-window)
+; (setq-default org-agenda-window-setup 'only-window)
+(setq-default org-agenda-window-setup 'reorganize-frame)
 
 (setq org-agenda-prefix-format '((agenda . " %i %-12:c %-6:e %?-12t% s")
                                  (todo . " %i %-12:c %-6:e ")
@@ -690,6 +796,14 @@ See also `org-save-all-org-buffers'"
         (lambda (&rest _)
           (gtd-save-org-buffers)))
 
+
+(advice-add 'org-agenda-clock-in :after 'gtd-save-org-buffers)
+(advice-add 'org-agenda-clock-out :after 'gtd-save-org-buffers)
+
+;; Clear org-super-agenda map
+(after! org-super-agenda
+  (setq org-super-agenda-header-map (make-sparse-keymap)))
+
 (after! org-agenda
   (org-super-agenda-mode t))
 
@@ -710,7 +824,7 @@ See also `org-save-all-org-buffers'"
                       (:name "Overdue" :deadline past :order 1)
                       (:name "Due Today" :deadline today :order 2)
                       (:name "Important"
-                              :and (:priority "A" :not (:todo ("DONE" "CANCELED" "FIXED" "SUSPENDED")))
+                              :and (:priority "A" :not (:todo ("DONE" "CANC" "FIXED" "SUSP")))
                               :order 3)
                       (:name "Due Soon" :deadline future :order 4)
                       (:name "Todo" :not (:habit t) :order 5)
@@ -722,8 +836,8 @@ See also `org-save-all-org-buffers'"
                 (
                   (org-agenda-overriding-header "") ;; Don't insert default headers
                   (org-super-agenda-groups
-                    '((:name "All todos" :and (:not(:todo "WAITING") :not (:habit t))) ; Filter out habits
-                      (:name "Waiting" :todo "WAITING")
+                    '((:name "All todos" :and (:not(:todo "WAIT") :not (:habit t))) ; Filter out habits
+                      (:name "Waiting" :todo "WAIT")
                       (:discard (:anything t))))
                 )
               )
@@ -766,7 +880,7 @@ See also `org-save-all-org-buffers'"
                     '((:name "Overdue" :deadline past :order 1)
                       (:name "Due Today" :deadline today :order 2)
                       (:name "Important"
-                              :and (:priority "A" :not (:todo ("DONE" "CANCELED" "FIXED" "SUSPENDED")))
+                              :and (:priority "A" :not (:todo ("DONE" "CANC" "FIXED" "SUSP")))
                               :order 3)
                       (:name "Due Soon" :deadline future :order 4)
                       (:name "Todo" :not (:habit t) :order 5))
@@ -791,19 +905,19 @@ See also `org-save-all-org-buffers'"
             (org-agenda-overriding-header "") ;; Don't insert default headers
             (org-super-agenda-groups
               '(
-                (:name "Reading" :todo "IN-PROGRESS" :order 0)
-                (:name "To be read" :order 1 :not (:todo ("DONE" "CANCELED")))
+                (:name "Reading" :todo "DOIN" :order 0)
+                (:name "To be read" :order 1 :not (:todo ("DONE" "CANC")))
                 (:name "Done" :order 2 :todo ("DONE"))
                 (:discard (:anything t))
                 )
             )
           )
         )
-        ("d" "Done tasks (org-super-agenda)" tags "/DONE|CANCELED"
-          (
+         ("d" "Done tasks (org-super-agenda)" tags "/DONE|CANC"
             (org-super-agenda-groups nil)
-          )
-        )
+         )
+
+
         ("o" "Someday (org-super-agenda)"
           (
             (alltodo "")
@@ -847,7 +961,7 @@ See also `org-save-all-org-buffers'"
 ;; Clock out when moving task to a done state
 (setq org-clock-out-when-done t)
 ;; Change tasks to whatever when clocking in
-(setq org-clock-in-switch-to-state "IN-PROGRESS")
+(setq org-clock-in-switch-to-state "DOIN")
 ;; use pretty things for the clocktable (this solves the misalignment issue when the title contains CJK characters)
 (setq org-pretty-entities t)
 
@@ -855,14 +969,15 @@ See also `org-save-all-org-buffers'"
 (setq org-clock-persist 'history)
 (org-clock-persistence-insinuate)
 
+;; 2023/01/29: This will result in the capture task being created at 04:00
 ;; I usually sleep before 04:00
-(setq org-extend-today-until 4)
+;; (setq org-extend-today-until 4)
 
 ;; Override the default config
 (setq org-structure-template-alist
-    '(("s" . "src")
-     ("l" . "export latex\n")
-     ("q" . "quote\n")))
+      '(("s" . "src")
+        ("l" . "export latex\n")
+        ("q" . "quote\n")))
 
 (add-to-list 'org-modules 'org-tempo t)
 (require 'org-tempo)
@@ -875,13 +990,13 @@ See also `org-save-all-org-buffers'"
 (add-to-list 'org-structure-template-alist '("yaml" . "src yaml"))
 (add-to-list 'org-structure-template-alist '("json" . "src json"))
 
-; templates for elisp source block
+                                        ; templates for elisp source block
 (add-to-list 'org-structure-template-alist '("el" . "src emacs-lisp"))
-; templates for noweb reference syntax
+                                        ; templates for noweb reference syntax
 (add-to-list 'org-structure-template-alist '("ei" . "src emacs-lisp :noweb no-export"))
 (add-to-list 'org-structure-template-alist '("es" . "src emacs-lisp :tangle no :noweb-ref"))
 
-; templates for C/C++ source block
+                                        ; templates for C/C++ source block
 (add-to-list 'org-structure-template-alist '("c"  . "src C"))
 (add-to-list 'org-structure-template-alist '("cp" . "src cpp :includes <bits/stdc++.h> :namespaces std"))
 
@@ -983,22 +1098,34 @@ See also `org-save-all-org-buffers'"
 (after! org-superstar
   (setq org-superstar-headline-bullets-list '("◉" "○" "●" "◈" "◇")))
 
-(setq org-download-image-dir "~/photos/emacs")
-;; Copy from org-download-screenshot-method customizations
-(setq org-download-screenshot-method "flameshot gui --raw > %s")
-
-(map! :after org
-      :map org-mode-map
-      :localleader
-      "js" 'org-download-screenshot
-      "jc" 'org-download-clipboard)
+(after! org-download
+  (setq org-download-method 'directory
+        org-download-image-dir "~/photos/emacs"
+        org-download-screenshot-method "flameshot gui --raw > %s"
+        org-download-image-org-width 600
+        org-download-heading-lvl 1))
 
 (after! org-fancy-priorities
-  (setq org-fancy-priorities-list '("❗" "⚠️" "⚑" "⬆" "⬇" "■" "☕")))
+  ; (setq org-fancy-priorities-list '("❗" "⚠️" "⚑" "⬆" "⬇" "■" "☕")
+  (setq org-fancy-priorities-list '("[#A]" "[#B]" "[#C]" "[#D]" "[#E]")))
 
 (after! org
   (set-company-backend! 'org-mode
     'company-files 'company-tempo))
+
+(use-package! org-clock-budget
+  :config
+  (setq org-clock-budget-intervals
+    ;; Calculate from the installation day
+    '(("BUDGET_SEM" (lambda() (cons (format-time-string "%Y-02-14 00:00:00") (format-time-string "%Y-05-12 23:59:59"))))
+      ("BUDGET_WEEK" org-clock-budget-interval-this-week)))
+  (setq org-clock-budget-daily-budgetable-hours 11))
+
+(after! org-roam-ui
+   (setq org-roam-ui-sync-theme t
+          org-roam-ui-follow t
+          org-roam-ui-update-on-save t
+          org-roam-ui-open-on-start t))
 
 (after! company
   (setq company-tempo-expand t)
@@ -1019,7 +1146,7 @@ See also `org-save-all-org-buffers'"
   (setq ccls-initialization-options '(:index (:comments 2) :completion (:detailedLabel t)))
   (set-lsp-priority! 'ccls 0))
 (setq ccls-executable "/usr/bin/ccls")
-;; (setq ccls-args '("--log-file=/tmp/ccls.log"))
+(setq ccls-args '("--log-file=/tmp/ccls.log"))
 
 (after! cc-mode
   (setq-hook! 'cc-mode-hook tab-width 4 c-basic-offset 4))
@@ -1044,11 +1171,16 @@ See also `org-save-all-org-buffers'"
       :remote? t
       :server-id 'ccls))))
 
+(after! persp-mode
+  (setq persp-emacsclient-init-frame-behaviour-override "main"))
+
+
+
 (defun cycatz/copy-current-line-position-to-clipboard ()
   "Copy current line in file to clipboard as '</path/to/file>:<line-number>'"
   (interactive)
   (let ((path-with-line-number
-         (concat (buffer-file-name) ":" (number-to-string (line-number-at-pos)))))
+         (concat "[[" (buffer-file-name) "::" (number-to-string (line-number-at-pos)) "]]")))
     (kill-new path-with-line-number)
     (message (concat path-with-line-number " copied to clipboard"))))
 (map!
@@ -1154,3 +1286,14 @@ context.  When called with an argument, unconditionally call
                                     ((modi/org-in-any-block-p) #'modi/org-split-block)
                                     (t #'org-insert-heading)))))
     (advice-add 'org-meta-return :override #'modi/org-meta-return)
+
+(use-package! python-black
+  :demand t
+  :after python
+  :config
+  ;; (add-hook! 'python-mode-hook #'python-black-on-save-mode)
+  ;; Feel free to throw your own personal keybindings here
+  (map! :leader :desc "Blacken Buffer" "m b b" #'python-black-buffer)
+  (map! :leader :desc "Blacken Region" "m b r" #'python-black-region)
+  (map! :leader :desc "Blacken Statement" "m b s" #'python-black-statement)
+)

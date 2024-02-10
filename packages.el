@@ -9,8 +9,11 @@
 ;; To install SOME-PACKAGE from MELPA, ELPA or emacsmirror:
 ;(package! some-package)
 (package! org-super-agenda)
-(package! org-download)
 (package! evil-org)
+(package! rotate)
+(package! org-roam-ui)
+(package! org-super-links
+  :recipe (:host github :host github :repo "toshism/org-super-links" :branch "develop"))
 
 ;; To install a package directly from a remote git repo, you must specify a
 ;; `:recipe'. You'll find documentation on what `:recipe' accepts here:
@@ -24,6 +27,14 @@
 ;(package! this-package
 ;  :recipe (:host github :repo "username/repo"
 ;           :files ("some-file.el" "src/lisp/*.el")))
+;
+(package! org-hyperscheduler
+  :recipe (:host github :repo "dmitrym0/org-hyperscheduler"))
+(package! org-clock-budget
+  :recipe (:host github :repo "Fuco1/org-clock-budget" :files ("org-clock-budget.el")))
+(package! org-time-budgets
+  :recipe (:host github :repo "leoc/org-time-budgets"))
+
 
 ;; If you'd like to disable a package included with Doom, you can do so here
 ;; with the `:disable' property:
@@ -31,6 +42,19 @@
 (package! evil-escape :disable t)
 ;; Restore key 's'
 (package! evil-snipe :disable t)
+
+;; ref: https://emacs.stackexchange.com/questions/75827/doom-emacs-error-running-hook-global-git-commit-mode-because-void-variable
+(package! transient :pin "c2bdf7e12c530eb85476d3aef317eb2941ab9440")
+(package! with-editor :pin "bbc60f68ac190f02da8a100b6fb67cf1c27c53ab")
+
+
+(package! why-this
+        :recipe (:host nil :repo "https://codeberg.org/akib/emacs-why-this.git"))
+(package! ox-gfm)
+
+
+(package! python-black)
+
 
 ;; You can override the recipe of a built in package without having to specify
 ;; all the properties for `:recipe'. These will inherit the rest of its recipe
