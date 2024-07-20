@@ -970,11 +970,23 @@ Without it, code highlighting will not work functionally.
 *** Org-download
 #+begin_src emacs-lisp
 (after! org-download
-  (setq org-download-method 'directory
-        org-download-image-dir "~/photos/emacs"
-        org-download-screenshot-method "flameshot gui --raw > %s"
-        org-download-image-org-width 600
-        org-download-heading-lvl 1))
+      (setq org-download-method 'directory)
+      (setq-default org-download-image-dir (concat (getenv "HOME") "/photos/emacs"))
+      (setq org-download-screenshot-method "flameshot gui --raw > %s")
+      (setq org-download-image-org-width 600)
+      (setq org-download-link-format "[[file:%s]]\n"
+            org-download-abbreviate-filename-function #'file-relative-name)
+      (setq org-download-link-format-function #'org-download-link-format-function-default)
+
+)
+;; See https://github.com/abo-abo/org-download/issues/46#issuecomment-1826785081
+(defun cycatz/org-download-dir ()
+  "Download files in ~/photos/emacs/$filename/"
+  (when buffer-file-name
+        (let ((filename-without-home (string-replace (getenv "HOME") "" (file-name-sans-extension (buffer-file-name)))))
+        (setq-local org-download-image-dir (format "%s/photos/emacs/%s" (getenv "HOME") filename-without-home)))))
+(add-hook 'org-mode-hook 'cycatz/org-download-dir)
+
 #+end_src
 
 *** Org-fancy-priorities
