@@ -57,6 +57,26 @@
 
 (package! zotxt)
 
+(package! org-alert
+  :recipe (:host github :repo "spegoraro/org-alert"))
+
+(package! indent-bars
+  :recipe (:host github :repo "jdtsmith/indent-bars"))
+
+(package! org-ql)
+(package! org-journal-tags)
+
+;; (package! org-roam-ql
+;;   :recipe (:host github :repo "ahmed-shariff/org-roam-ql"
+;;                          :files (:defaults (:exclude "org-roam-ql-ql.el"))))
+
+(package! vulpea)
+
+(package!  org-table-wrap-functions
+  :recipe (:host github :repo "analyticd/org-table-wrap-functions"))
+
+(package! org-caldav)
+
 
 ;; You can override the recipe of a built in package without having to specify
 ;; all the properties for `:recipe'. These will inherit the rest of its recipe
