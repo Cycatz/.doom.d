@@ -1630,6 +1630,62 @@ Stop using corfu because Interactive Theorem Proving class requires me to use co
   (setq lsp-ltex-version "15.2.0"))
 #+end_src
 
+#+begin_src emacs-lisp
+(defun +cycatz/check-grammar-before-save ()
+  "Check grammar using langtool before saving, in text modes."
+  (add-hook 'before-save-hook #'langtool-check-buffer nil t))
+
+(add-hook 'text-mode-hook #'+cycatz/check-grammar-before-save)
+#+end_src
+
+#+begin_src emacs-lisp
+(use-package! langtool-popup)
+#+end_src
+
+
+*** AI
+#+begin_src emacs-lisp
+(use-package! gptel
+ :config
+ ;; Set the default major mode for gptel buffers
+ (setq! gptel-default-mode #'org-mode)
+
+ ;; Define OpenWebUI backend (OpenAI-compatible local API)
+ (setq my-gptel-openwebui
+       (gptel-make-openai "OpenWebUI"
+         :host "icdslab14:8080"
+         :protocol "http"
+         :key "sk-ec0bc0c1546545ab86c05ca22f066f6d"
+         :endpoint "/api/chat/completions"
+         :stream t
+         :models '("llama3.2:latest")))
+
+ ;; Define Ollama backend (local LLM like Mistral, LLaMA3, etc.)
+ (setq my-gptel-ollama
+       (gptel-make-ollama "Ollama"
+         :host "icdslab14:11434"
+         :stream t
+         :models '("llama3.2:latest")))
+
+ ;; Set default backend and model (you can change this later)
+ (setq! gptel-backend my-gptel-ollama)
+ (setq! gptel-model 'llama3.2:latest))
+#+end_src
+
+#+begin_src emacs-lisp
+(after! gptel
+  (map! :leader
+        (:prefix ("-" . "GPTel")
+         :desc "Send prompt (RET)" [return]  #'gptel-send
+         :desc "Send region"       "e"       #'gptel-send-region
+         :desc "Abort request"     "x"       #'gptel-abort
+         :desc "Rewrite region"    "r"       #'gptel-rewrite
+         :desc "Add to region"     "a"       #'gptel-add
+         :desc "Start a chat"      "-"       #'gptel
+         :desc "Add a file"        "f"       #'gptel-add-file
+         :desc "Enable gptel-mode" "m"       #'gptel-mode)))
+#+end_src
+
 ** Misc
 
 Avoid creating workspaces when attaching the emacs server, see [[https://github.com/doomemacs/doomemacs/issues/1949][[REQUEST] No new workspace created on incoming emacsclient sessions · Issue #1949 · doomemacs/doomemacs]]:
