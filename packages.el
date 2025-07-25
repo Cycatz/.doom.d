@@ -44,7 +44,7 @@
 (package! evil-snipe :disable t)
 
 ;; ref: https://emacs.stackexchange.com/questions/75827/doom-emacs-error-running-hook-global-git-commit-mode-because-void-variable
-(package! transient :pin "c2bdf7e12c530eb85476d3aef317eb2941ab9440")
+;; (package! transient :pin "c2bdf7e12c530eb85476d3aef317eb2941ab9440")
 (package! with-editor :pin "bbc60f68ac190f02da8a100b6fb67cf1c27c53ab")
 
 
@@ -77,7 +77,31 @@
 
 (package! org-caldav)
 
+(package! org-ref)
+(package! org-roam-bibtex)
+(package! kind-icon)
 
+(package! svelte-mode)
+
+
+;; Stop using corfu because Interactive Theorem Proving class requires me to use company-coq :)
+(package! corfu :disable t)
+
+(package! cook-mode
+  :recipe (:host github
+            :repo "cooklang/cook-mode"))
+
+;; Wait until the lsp-ltex-ls doesn't crash
+(package! lsp-ltex :disable t)
+(package! todoist)
+
+(package! org-todoist
+  :recipe (:host github
+           :repo "lillenne/org-todoist"
+           :branch "main"
+           :files ("org-todoist.el")))
+
+(package! opam)
 ;; You can override the recipe of a built in package without having to specify
 ;; all the properties for `:recipe'. These will inherit the rest of its recipe
 ;; from Doom or MELPA/ELPA/Emacsmirror:

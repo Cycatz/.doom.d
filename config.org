@@ -47,6 +47,9 @@
 (setq org-directory "~/org/")
 
 
+
+
+
 ;; Whenever you reconfigure a package, make sure to wrap your config in an
 ;; `after!' block, otherwise Doom's defaults may override your settings. E.g.
 ;;
@@ -89,6 +92,9 @@
 
 #+begin_src emacs-lisp
 (setq confirm-kill-emacs nil)
+(after! doom
+  (setq doom-scratch-initial-major-mode 'org-mode
+        doom-scratch-initial-message "# Scratch buffer in Org mode\n\n"))
 #+end_src
 
 *** undo-tree
@@ -132,6 +138,15 @@
       )
 #+end_src
 
+
+
+*** Disable creating new workspace when attaching an emacs  client
+#+begin_src emacs-lisp
+(after! persp-mode
+  (setq persp-emacsclient-init-frame-behaviour-override
+   `(+workspace-current-name))
+)
+#+end_src
 ** Font
  See [[https://emacs-china.org/t/emacs/15676/24?page=2][经验分享：emacs单独设置中文与英语的字体 - Emacs-general - Emacs China ]]for details:
 
@@ -148,6 +163,7 @@
 ;; The spacing doesn't work
 ;; (setq doom-font (font-spec :family "Julia Mono" :size 20 :spacing 90))
 (setq doom-variable-pitch-font "-LINO-Helvetica Neue-normal-normal-normal-*-22-*-*-*-*-0-iso10646-1")
+;; (setq doom-variable-pitch-font "-IBM -IBM Plex Mono-regular-normal-normal-*-*-*-*-*-m-0-iso10646-1")
 
 (setq doom-modeline-height 1)
 (set-face-attribute 'mode-line nil :height 150)
@@ -193,6 +209,7 @@ Set CJK fonts after doom sets the font. It shows the emoji correctly.
     (add-to-list 'yas-snippet-dirs (concat (getenv "HOME") "/Code/Snippets")))
 #+end_src
 ** Appearance
+
 *** Frame
 #+begin_src emacs-lisp
 ;; Not decent enough, need to come up with a better way
@@ -200,10 +217,14 @@ Set CJK fonts after doom sets the font. It shows the emoji correctly.
             (append (list
             '(internal-border-width . 20)
             '(left-fringe    . 0)
-            '(right-fringe   . 0)
-            '(tool-bar-lines . 0)
-            '(menu-bar-lines . 0)
-            '(vertical-scroll-bars . nil))))
+            '(right-fringe   . 0))))
+            ;; '(tool-bar-lines . 0)
+            ;; '(menu-bar-lines . 0)
+            ;; '(vertical-scroll-bars . nil))))
+;;  somehow it doesn't work, I guess it is disabled when loading a language major mode
+;; (tool-bar-mode 1)
+(menu-bar-mode 1)
+(scroll-bar-mode 1)
 
 (setq-default frame-title-format
               '(:eval
@@ -293,7 +314,7 @@ Enable ~x-stretch-cursor~ to identify spaces and tab
 (setq org-highest-priority ?A
         org-default-priority ?C
         org-lowest-priority ?E)
- (setq org-priority-faces '((?A . (:foreground "red" :weight 'bold))
+ (setq org-priority-faces '((?A . (:foreground "red" :weight bold))
                             (?B . (:foreground "orange red"))
                             (?C . (:foreground "dark orange"))
                             (?D . (:foreground "orange"))
@@ -425,7 +446,9 @@ Also contain some refile configs:
                            ("~/org/todo.org" :maxlevel . 1)
                            ("~/org/tracker.org" :maxlevel . 3)
                            ("~/org/someday.org" :level . 1)
-                           ("~/org/cal.org" :level . 1)))
+                           ("~/org/appointments.org" :level . 1)
+                           ("~/org/cal_default.org" :level . 1)
+                           ("~/org/cal_event.org" :level . 1)))
 (setq org-refile-use-outline-path 'file)
 (setq org-outline-path-complete-in-steps nil)
 
@@ -585,10 +608,57 @@ See also `org-save-all-org-buffers'"
 
 (advice-add 'org-agenda-clock-in :after 'gtd-save-org-buffers)
 (advice-add 'org-agenda-clock-out :after 'gtd-save-org-buffers)
+
+(defun reload-org-agenda-buffers (&rest _)
+  "Reload all buffers associated with files in `org-agenda-files`."
+  (interactive)
+  (let* ((agenda-files (org-agenda-files))
+         (reloaded-buffers
+          (mapcar (lambda (buf)
+                    (with-current-buffer buf
+                      (when (and (buffer-file-name)
+                                 (member (buffer-file-name) agenda-files)
+                                 (file-exists-p (buffer-file-name)))
+                        (revert-buffer t t t)
+                        buf)))
+                  (buffer-list))))
+    (message "Reloaded %d org-agenda buffer(s)" (length (delq nil reloaded-buffers)))))
+
+;; Reload all agenda files when rebuilding the entries using key 'r'
+(advice-add 'org-agenda-redo :before 'reload-org-agenda-buffers)
 #+end_src
 
-#+RESULTS:
+**** Colored agenda clock view
+From  [[https://orgmode.org/worg/org-hacks.html][Colorize clocking tasks with a block]] 效果很好，但是不是全寬的話高度會沒有顯示出來，不知道為什麼，缺點是速度有一點被拖慢。
 
+#+begin_src elisp
+;; work with org-agenda dispatcher [c] "Today Clocked Tasks" to view today's clocked tasks.
+(defun org-agenda-log-mode-colorize-block ()
+  "Set different line spacing based on clock time duration."
+  (save-excursion
+    (let* ((colors (cl-case (alist-get 'background-mode (frame-parameters))
+                                 ('light
+                                  (list "#F6B1C3" "#FFFF9D" "#BEEB9F" "#ADD5F7"))
+                                 ('dark
+                                  (list "#aa557f" "DarkGreen" "DarkSlateGray" "DarkSlateBlue"))))
+           pos
+           duration)
+      (nconc colors colors)
+      (goto-char (point-min))
+      (while (setq pos (next-single-property-change (point) 'duration))
+        (goto-char pos)
+        (when (and (not (equal pos (point-at-eol)))
+                   (setq duration (org-get-at-bol 'duration)))
+          ;; larger duration bar height
+          (let ((line-height (if (< duration 15) 1.0 (+ 0.5 (/ duration 30))))
+                (ov (make-overlay (point-at-bol) (1+ (point-at-eol)))))
+            (overlay-put ov 'face `(:background ,(car colors) :foreground "black"))
+            (setq colors (cdr colors))
+            (overlay-put ov 'line-height line-height)
+            (overlay-put ov 'line-spacing (1- line-height))))))))
+
+(add-hook 'org-agenda-finalize-hook #'org-agenda-log-mode-colorize-block)
+#+end_src
 **** evil-org-agenda
 Fix the issue evil keybindings doesn't work in super-agenda headers.
 
@@ -817,6 +887,20 @@ Here is a detailed article about org-capture: https://www.zmonster.me/2018/02/28
               "* %^{Title}\nSource: %u, %c\n #+BEGIN_QUOTE\n%i\n#+END_QUOTE\n\n\n%?")
           ("L" "org protocol Link" entry (file+headline "web/inbox.org" "Inbox")
               "* %? [[%:link][%:description]] \nCaptured On: %U")))
+
+
+#+end_src
+
+In addition, define ~org-capture-at-point~, which is useful when adding todos under a project:
+#+begin_src elisp
+(defun org-capture-at-point ()
+  "Insert an org capture template at point."
+  (interactive)
+  (org-capture 0))
+
+(map! :after org
+      :map org-mode-map
+      "C-c c" #'org-capture-at-point)
 #+end_src
 
 *** Org-clock
@@ -901,6 +985,7 @@ from: https://systemcrafters.net/build-a-second-brain-in-emacs/5-org-roam-hacks/
 The ~org-roam-insert-immediate~ has been deprecated, this achieves the same feature as it did:
 
 #+begin_src elisp
+; It takes the first (usually the "default" template) template to capture
 (defun org-roam-node-insert-immediate (arg &rest args)
   (interactive "P")
   (let ((args (cons arg args))
@@ -908,6 +993,45 @@ The ~org-roam-insert-immediate~ has been deprecated, this achieves the same feat
                                                   '(:immediate-finish t)))))
     (apply #'org-roam-node-insert args)))
 
+(map!
+      :map org-mode-map
+      :leader
+      "nrI" #'org-roam-node-insert-immediate)
+
+#+end_src
+
+Org-roam-capture from https://systemcrafters.net/build-a-second-brain-in-emacs/capturing-notes-efficiently/
+
+#+begin_src elisp
+  (setq org-roam-capture-templates
+        '(("d" "default" plain
+             "%?"
+            :if-new (file+head "%<%Y%m%d%H%M%S>-${slug}.org" "#+title: ${title}\n")
+            :unnarrowed t)
+          ("b" "book notes" plain
+             "#+filetags: book\n- tag :: \n- source :: %^{Source}\n- author :: %^{Author}\n%?"
+             :if-new (file+head "%<%Y%m%d%H%M%S>-${slug}.org" "#+title: ${title}\n")
+             :unnarrowed t)
+          ("a" "web article notes" plain
+             "#+filetags: article\n- tag :: \n- source :: %^{Source}\n- author :: %^{Author}\n%?"
+             :if-new (file+head "%<%Y%m%d%H%M%S>-${slug}.org" "#+title: ${title}\n")
+             :unnarrowed t)
+        ;; for citar-org-roam
+         ("n" "literature note" plain
+         "%?"
+         :target
+         (file+head
+          "%(expand-file-name (or citar-org-roam-subdir \"\") org-roam-directory)/${citar-citekey}.org\n"
+          "#+filetags: paper\n#+title: ${citar-citekey} (${citar-date}). ${note-title}.\n#+created: %U\n#+last_modified: %U\n\n")
+         :unnarrowed t)))
+#+end_src
+
+Also setting capture templates for org-roam-daily,  adding a timestamp each when adding a journal
+#+begin_src elisp
+(setq org-roam-dailies-capture-templates
+      '(("d" "default" entry
+         "* %T: %?"
+         :target (file+head "%<%Y-%m-%d>.org" "#+TITLE: %<%Y-%m-%d>\n#+date: %u\n"))))
 #+end_src
 
 **** vulpea
@@ -927,6 +1051,7 @@ See [[https://d12frosted.io/posts/2020-06-24-task-management-with-roam-vol2.html
                                  (todo   . " %i %(vulpea-agenda-category 15) %-6e ")
                                  (tags   . " %i %(vulpea-agenda-category 15) %-6e ")
                                  (search . " %i %(vulpea-agenda-category 15) %-6e ")))
+;; See https://github.com/d12frosted/d12frosted.io/issues/19#issuecomment-2249746111
 (defun vulpea-agenda-category (&optional len)
   "Get category of item at point for agenda.
 
@@ -944,18 +1069,15 @@ longer than LEN.
 Usage example:
 
   (setq org-agenda-prefix-format
-        '((agenda . \" %(vulpea-agenda-category) %?-12t %12s\")))
+        \\='((agenda . \" %(vulpea-agenda-category) %?-12t %12s\")))
 
 Refer to `org-agenda-prefix-format' for more information."
-  (let* ((file-name (when buffer-file-name
+  (if (eq major-mode 'org-mode)
+      (let* ((file-name (when buffer-file-name
                       (file-name-sans-extension
                        (file-name-nondirectory buffer-file-name))))
          (title (vulpea-buffer-prop-get "title"))
-         ;; Prevent calling org-get-id on a non-file buffer & return ???
-         ;; Refer to `org-get-category' for more information
-         ;; Also see https://github.com/d12frosted/d12frosted.io/issues/19#issuecomment-2245513141
-         ;; (category  (org-get-category))
-         (category (when buffer-file-name (org-get-category)))
+         (category (org-get-category))
          (result
           (or (if (and
                    title
@@ -965,8 +1087,8 @@ Refer to `org-agenda-prefix-format' for more information."
               "")))
     (if (numberp len)
         (s-truncate len (s-pad-right len " " result))
-      result)))
-
+      result))
+    (s-repeat (or len 0) " ")))
 #+end_src
 
 See [[https://d12frosted.io/posts/2021-01-16-task-management-with-roam-vol5.html][Boris Buliga - Task management with org-roam Vol. 5: Dynamic and fast agenda]]
@@ -1033,7 +1155,9 @@ tasks."
                            "~/org/agenda.org"
                            "~/org/project.org"
                            "~/org/todo.org"
-                           "~/org/cal.org"
+                           "~/org/cal_default.org"
+                           "~/org/cal_event.org"
+                           "~/org/appointments.org"
                            "~/org/someday.org")))))
 
 (add-hook 'find-file-hook #'vulpea-project-update-tag)
@@ -1160,6 +1284,9 @@ If nil it defaults to `split-string-default-separators', normally
       :localleader
       "jb" 'org-beamer-export-to-pdf)
 #+end_src
+
+
+
 *** Org-latex
 **** Configs
 The ~-shell-escape~ argument is for using ~minted~ package.
@@ -1167,10 +1294,12 @@ Without it, code highlighting will not work functionally.
 
 #+begin_src emacs-lisp
 (after! ox-latex
-  (setq org-latex-pdf-process
-        '("xelatex -shell-escape -interaction nonstopmode -output-directory %o %f"
-          "xelatex -shell-escape -interaction nonstopmode -output-directory %o %f"
-          "xelatex -shell-escape -interaction nonstopmode -output-directory %o %f"))
+  (setq org-latex-pdf-process '("latexmk -xelatex -f -shell-escape --file-line-error -interaction=nonstopmode -output-directory=%o %f"))
+
+  ;; (setq org-latex-pdf-process
+  ;;       '("xelatex -shell-escape -interaction nonstopmode -output-directory %o %f"
+  ;;         "xelatex -shell-escape -interaction nonstopmode -output-directory %o %f"
+  ;;         "xelatex -shell-escape -interaction nonstopmode -output-directory %o %f"))
    (add-to-list 'org-latex-classes
                 '("org-plain-latex"
                   "\\documentclass{article}
@@ -1256,7 +1385,7 @@ Without it, code highlighting will not work functionally.
       (setq org-download-screenshot-method "flameshot gui --raw > %s")
       (setq org-download-image-org-width 600)
       (setq org-download-link-format "[[file:%s]]\n"
-            org-download-abbreviate-filename-function #'file-relative-name)
+            org-download-abbreviate-filename-function #'expand-file-name)
       (setq org-download-link-format-function #'org-download-link-format-function-default)
 
 )
@@ -1279,9 +1408,9 @@ Without it, code highlighting will not work functionally.
 
 *** Org/Company
 #+begin_src emacs-lisp
-(after! org
-  (set-company-backend! 'org-mode
-    'company-files 'company-tempo))
+;; (after! org
+;;   (set-company-backend! 'org-mode
+;;     'company-files 'company-tempo))
 #+end_src
 
 *** Org-alert
@@ -1293,19 +1422,54 @@ Without it, code highlighting will not work functionally.
 #+end_src
 
 *** Org-caldav
+#+begin_src 
+  ;; (setq org-caldav-calendars
+  ;;     '((:url "https://baikal.staque.xyz/dav.php/calendars/cycatz"
+  ;;        :calendar-id "default"
+  ;;        :files ("~/org/todo.org")
+  ;;        :inbox (file+headline "~/org/cal_default.org" "Default"))
+  ;;       (:url "https://baikal.staque.xyz/dav.php/calendars/cycatz"
+  ;;        :calendar-id "event"
+  ;;        :files ("~/org/agenda.org")
+  ;;        :inbox (file+headline "~/org/cal_event.org" "Event"))))
+#+end_src
 
 #+begin_src emacs-lisp
 (use-package! org-caldav
   :config
+  ;; Because org-cal-inbox file will be automatically added into org-caldav-files, so making two calendars sync into a same file is not a good idea? plz confirm it someday, I am not sure
+  ;; See https://github.com/dengste/org-caldav/blob/master/doc/org-caldav.org#required-configuration-settings
   (setq org-caldav-calendars
       '((:url "https://baikal.staque.xyz/dav.php/calendars/cycatz"
          :calendar-id "default"
          :files ("~/org/todo.org")
-         :inbox (file+headline "~/org/cal.org" "Default"))
+         :inbox (file+headline "~/org/cal_default.org" "Default"))
         (:url "https://baikal.staque.xyz/dav.php/calendars/cycatz"
          :calendar-id "event"
          :files ("~/org/agenda.org")
-         :inbox (file+headline "~/org/cal.org" "Event"))))
+         :inbox (file+headline "~/org/cal_event.org" "Event"))
+        ))
+  (defun fetch-remote-ics-to-temp-file (url)
+    "Fetch a remote ICS file from URL and save it to a temporary file in /tmp."
+    (let* ((temp-file (make-temp-file "remote-calendar-" nil ".ics"))  ;; Create a temporary file
+           (success (url-copy-file url temp-file t)))  ;; Return nil on failure
+      ;; Check if the fetch was successful
+      (if success
+          (progn
+            (message "Fetched ICS file saved to: %s" temp-file)
+            temp-file)  ;; Return the path of the temporary file
+        (message "Failed to fetch ICS file from: %s" url)
+        nil)))  ;; Return nil if fetching failed
+
+
+  (setq org-caldav-inbox "~/org/appointments.org")
+  ;; Quite slow....
+  (defun cycatz/sync-ics-files ()
+    (interactive)
+    (delete-file (file-truename org-caldav-inbox))
+    (org-caldav-import-ics-to-org (fetch-remote-ics-to-temp-file "https://campus.epfl.ch/deploy/backend_proxy/14620/raw-isacademia?action=get_ics&key=1e58aae5savftjX5ijoUEpQo2Uirf2yqJC9jWpgp"))
+    (org-caldav-import-ics-to-org (fetch-remote-ics-to-temp-file "https://ewa.epfl.ch/owa/calendar/f1825074a11b4faebb5ee08bf9a41ea6@epfl.ch/e77387ffbfdb45c698cfcd02ddff6e4e15116979022003617832/calendar.ics")))
+
   (unless (file-exists-p (concat doom-cache-dir "/org-caldav/"))
      (make-directory (concat doom-cache-dir "/org-caldav/")))
   (setq org-caldav-save-directory (concat doom-cache-dir "/org-caldav/")
@@ -1317,7 +1481,58 @@ Without it, code highlighting will not work functionally.
 )
 #+end_src
 
-*** Misc
+*** Org-zotxt
+#+begin_src emacs-lisp
+(add-hook 'org-mode-hook (lambda () (org-zotxt-mode 1)))
+(map!
+   :after org
+   :map org-mode-map
+   "C-c \"\"" '(lambda () (interactive)
+                      (org-zotxt-insert-reference-link '(4))))
+#+end_src
+
+** bib management
+ref: [[https://github.com/doomemacs/doomemacs/tree/master/modules/tools/biblio][doomemacs/modules/tools/biblio at master · doomemacs/doomemacs]]
+also see: [[https://www.reddit.com/r/emacs/comments/cxu0qg/comment/eyqe4vq/][Emacs, org, and bibtex as alternative to zotero and calibre : r/emacs]]
+#+begin_src elisp
+(use-package citar
+  :after org
+  :config
+  (add-hook 'org-mode-hook #'citar-capf-setup)
+  (setq! citar-bibliography '("~/org/ref/biblio.bib")
+         citar-notes-paths '("~/org/ref/cs"))
+  (setq! citar-open-entry-function #'citar-open-entry-in-zotero)
+  (setq citar-file-open-functions
+      '(("pdf" . citar-open-entry-in-zotero)
+        ("html" . citar-open-entry-in-zotero)
+        ;; You can manually add them here
+        ))
+  (map!
+        :after org
+        :map org-mode-map
+        :localleader
+        "@" '(:ignorne @ :which-key "citation stuff")
+        "@i" #'org-cite-insert
+        "@o" #'citar-open
+        "@n" #'citar-open-note
+        "@c" #'citar-org-roam-open-current-refs
+        "@e" #'citar-open-entry))
+
+
+(use-package citar-embark
+  :after citar embark
+  :no-require
+  :config (citar-embark-mode))
+
+(use-package citar-org-roam
+  :after (citar org-roam)
+  :config
+  (citar-org-roam-mode)
+  (setq citar-org-roam-note-title-template "${title} - ${author}")
+  (setq citar-org-roam-capture-template-key "n"))
+#+end_src
+
+** Org Misc
 # https://github.com/doomemacs/doomemacs/issues/1773
 #+begin_src emacs-lisp
 (use-package! org-clock-budget
@@ -1343,15 +1558,37 @@ Without it, code highlighting will not work functionally.
           org-roam-ui-update-on-save t
           org-roam-ui-open-on-start t))
 #+end_src
-** Company
+
+** Completions
+todo: corfu Example:
+[[https://git.sr.ht/~gagbo/doom-config/tree/8e3014985774d68c6f768dd4e3c8045255cd87d1/item/modules/completion/corfu][~gagbo/doom-config (8e3014985774d68c6f768dd4e3c8045255cd87d1): modules/completion/corfu/ - sourcehut git]]
+
+Stop using corfu because Interactive Theorem Proving class requires me to use company-coq :)
+#+begin_src emacs-lisp
+; (after! corfu
+;   (setq corfu-auto-delay 0.4))
+#+end_src
+
+#+begin_src emacs-lisp
+;; (use-package! kind-icon
+;;   :after corfu
+;;   :custom
+;;   ;; to compute blended backgrounds correctly
+;;   (kind-icon-default-face 'corfu-default)
+;;   :config
+;;   (add-to-list 'corfu-margin-formatters #'kind-icon-margin-formatter))
+#+end_src
+
+#+RESULTS:
+
 #+begin_src emacs-lisp
 (after! company
-  (setq company-tempo-expand t)
   ;; Excluded file and dirs in company-files backend
   (setq company-files-exclusions '(".git/" ".stversions/" ".stfolder/" ".DS_Store"))
   ; Make completions Case-sensitive
   (setq company-dabbrev-downcase nil))
 #+end_src
+
 
 ** LSP
 
@@ -1379,25 +1616,18 @@ Without it, code highlighting will not work functionally.
 
 2022/12/17: Currently doesn't work, don't know why :(
 #+begin_src emacs-lisp
-(after! tramp
-  (when (require 'lsp-mode nil t)
+#+end_src
 
-    (setq lsp-enable-snippet nil
-          lsp-log-io nil
-          ;; To bypass the "lsp--document-highlight fails if
-          ;; textDocument/documentHighlight is not supported" error
-          lsp-enable-symbol-highlighting nil)
 
-    (lsp-register-client
-     (make-lsp-client
-      :new-connection
-      (lsp-tramp-connection "/usr/bin/ccls")
-       ; (lambda ()
-       ;   (cons "clangd" ; executable name on remote machine 'ccls'
-       ;         lsp-clients-clangd-args)))
-      :major-modes '(c-mode c++-mode objc-mode cuda-mode)
-      :remote? t
-      :server-id 'ccls))))
+*** Language Tool
+
+#+begin_src emacs-lisp
+(use-package! lsp-ltex
+  :hook (text-mode . (lambda ()
+                       (require 'lsp-ltex)
+                       (lsp)))  ; or lsp-deferred
+  :init
+  (setq lsp-ltex-version "15.2.0"))
 #+end_src
 
 ** Misc
@@ -1412,6 +1642,11 @@ Avoid creating workspaces when attaching the emacs server, see [[https://github.
 #+begin_src emacs-lisp
 
 #+end_src
+
+** Tramp
+
+
+
 * Snippets
 ** Copy Current file and Line Number
 #+begin_src emacs-lisp
@@ -1530,8 +1765,7 @@ context.  When called with an argument, unconditionally call
     (advice-add 'org-meta-return :override #'modi/org-meta-return)
 #+end_src
 
-
-* Lanauges
+* Languages
 ** Python
 #+begin_src emacs-lisp
 (use-package! python-black
@@ -1540,9 +1774,20 @@ context.  When called with an argument, unconditionally call
   :config
   ;; (add-hook! 'python-mode-hook #'python-black-on-save-mode)
   ;; Feel free to throw your own personal keybindings here
-  (map! :leader :desc "Blacken Buffer" "m b b" #'python-black-buffer)
-  (map! :leader :desc "Blacken Region" "m b r" #'python-black-region)
-  (map! :leader :desc "Blacken Statement" "m b s" #'python-black-statement)
+
+  ;; TODO: rewrite with this statement instead of polluting all existing maps
+  ;; (map! :map python-mode-map
+  ;;       :localleader)
+  ;; (map! :leader :desc "Blacken Buffer" "m b b" #'python-black-buffer)
+  ;; (map! :leader :desc "Blacken Region" "m b r" #'python-black-region)
+  ;; (map! :leader :desc "Blacken Statement" "m b s" #'python-black-statement)
 )
 
 #+end_src
+** Coq
+#+begin_src emacs-lisp
+(use-package! opam
+  :config
+  (opam-init))
+#+end_src
+
